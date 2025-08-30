@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Starry Time & Date — Responsive</title>
+  <style>
+    :root{
+      --nebula-opacity: 0.32;
+      --tail-length: 120px;
+      --star-count: 180;
+      --container-padding: 44px 64px;
+      --time-size: 4.25rem;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;}
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      color: #fff;
+    }
+
+    /* --- NEBULA (lightweight on mobile) --- */
+    .nebula{ 
+      position: absolute; inset: -20%; 
+      mix-blend-mode: screen; 
+      opacity: var(--nebula-opacity);
+      filter: url(#nebulaNoise) saturate(1.15) brightness(1.02);
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+    .nebula.n1{ 
+      background:
+        radial-gradient(1200px 700px at 20% 30%, #8b5cf6 0 15%, transparent 55%),
+        radial-gradient(1000px 600px at 70% 65%, #22d3ee 0 18%, transparent 58%),
+        radial-gradient(900px 700px at 45% 80%, #f59e0b 0 14%, transparent 60%);
+      animation: drift1 60s ease-in-out infinite alternate;
+    }
+    .nebula.n2{ 
+      background:
+        radial-gradient(900px 500px at 80% 20%, #ef4444 0 12%, transparent 55%),
+        radial-gradient(700px 700px at 35% 55%, #14b8a6 0 12%, transparent 60%);
+      animation: drift2 85s ease-in-out infinite alternate;
+    }
+    @keyframes drift1{ from{ transform: translate(0,0) scale(1);} to{ transform: translate(-5%, 4%) scale(1.07);} }
+    @keyframes drift2{ from{ transform: translate(0,0) scale(1);} to{ transform: translate(6%, -3%) scale(1.05);} }
+
+    /* --- STAR FIELD --- */
+    .stars { position: absolute; inset: 0; filter: blur(0.6px); pointer-events:none; }
+    .star { position: absolute; background: white; border-radius: 50%; opacity: .85; animation: twinkle var(--tw, 2.8s) infinite alternate ease-in-out; box-shadow: 0 0 8px rgba(255,255,255,.35); will-change: opacity, transform; }
+    @keyframes twinkle { from { opacity: .35; transform: scale(.9); } to { opacity: 1; transform: scale(1.15);} }
+
+    /* --- SHOOTING STARS WITH DIRECTIONAL TAILS --- */
+    .shooting-stars { position: absolute; inset: 0; pointer-events: none; z-index: 8; }
+    
+    .shooting-star-wrapper {
+      position: absolute;
+      transform-origin: 0 0;
+      will-change: transform, opacity;
+      animation: shootPath var(--duration) cubic-bezier(0.22, 0.9, 0.36, 1) forwards;
+      backface-visibility: hidden;
+    }
+    
+    .shooting-star {
+      position: relative;
+      width: 3px;
+      height: 3px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 
+        0 0 6px #fff,
+        0 0 12px #fff,
+        0 0 20px rgba(100, 200, 255, 0.85);
+      will-change: transform, filter;
+      transform-origin: center;
+    }
+    
+    /* Tail implemented with transform scaleX so we don't animate layout width */
+    .shooting-star-tail,
+    .shooting-star-tail-secondary {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      height: 2px;
+      transform: translateY(-50%) scaleX(0);
+      transform-origin: right center;
+      opacity: 0;
+      will-change: transform, opacity, filter;
+      box-shadow: 0 0 6px rgba(255,255,255,0.45);
+    }
+
+    .shooting-star-tail {
+      height: 1px;
+      width: var(--tail-length);
+      background: linear-gradient(90deg, 
+        transparent 0%,
+        rgba(255, 255, 255, 0.05) 10%,
+        rgba(255, 255, 255, 0.2) 30%,
+        rgba(255, 255, 255, 0.5) 60%,
+        rgba(255, 255, 255, 0.85) 85%,
+        white 100%
+      );
+      filter: blur(.6px);
+      animation: tailScale var(--duration) cubic-bezier(0.22, 0.9, 0.36, 1) forwards;
+    }
+
+    .shooting-star-tail-secondary {
+      height: 3px;
+      right: 10px;
+      width: calc(var(--tail-length) * 1.25);
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(100, 200, 255, 0.03) 20%,
+        rgba(100, 200, 255, 0.06) 50%,
+        rgba(100, 200, 255, 0.12) 80%,
+        rgba(100, 200, 255, 0.18) 100%
+      );
+      filter: blur(2px);
+      animation: tailScaleSecondary var(--duration) cubic-bezier(0.22, 0.9, 0.36, 1) forwards;
+    }
+
+    /* Path animations for trajectories (use translate3d to trigger GPU) */
+    @keyframes shootPath {
+      0% {
+        transform: translate3d(0, 0, 0);
+        opacity: 0;
+      }
+      6% {
+        opacity: 1;
+      }
+      94% {
+        opacity: 1;
+      }
+      100% {
+        transform: translate3d(var(--endX), var(--endY), 0);
+        opacity: 0;
+      }
+    }
+    
+    @keyframes tailScale {
+      0% { transform: translateY(-50%) scaleX(0); opacity: 0; }
+      8% { transform: translateY(-50%) scaleX(0.25); opacity: 1; }
+      45% { transform: translateY(-50%) scaleX(1.05); opacity: 1; }
+      85% { transform: translateY(-50%) scaleX(0.9); opacity: .6; }
+      100% { transform: translateY(-50%) scaleX(0.6); opacity: 0; }
+    }
+    @keyframes tailScaleSecondary {
+      0% { transform: translateY(-50%) scaleX(0); opacity: 0; }
+      12% { transform: translateY(-50%) scaleX(0.18); opacity: 0.65; }
+      50% { transform: translateY(-50%) scaleX(1.25); opacity: 0.45; }
+      90% { transform: translateY(-50%) scaleX(1.1); opacity: 0.18; }
+      100% { transform: translateY(-50%) scaleX(0.8); opacity: 0; }
+    }
+
+    @keyframes glow {
+      0%, 10% { filter: brightness(1); }
+      50% { filter: brightness(1.6); }
+      90%, 100% { filter: brightness(0.9); }
+    }
+    
+    /* --- CLOCK CARD --- */
+    .container {
+      position: relative;
+      text-align: center;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: var(--container-padding);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.15), inset 0 0 40px rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      max-width: 94%;
+      margin: 0 3%;
+    }
+    #time { font-size: var(--time-size); font-weight: 700; letter-spacing: 2px; text-shadow: 0 0 22px rgba(255,255,255,0.65); line-height:1; }
+    #date { font-size: 1.35rem; margin-top: 10px; opacity: 0.95; }
+
+    /* Vignette for cinematic depth */
+    .vignette{ position:absolute; inset:-10%; pointer-events:none; background: radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(0,0,0,.35) 90%); z-index:5; }
+
+    /* Motion reduction */
+    @media (prefers-reduced-motion: reduce){
+      .nebula, .star, .shooting-star-wrapper{ animation: none !important; transition: none !important; }
+      .shooting-star-tail, .shooting-star-tail-secondary { display:none !important; }
+    }
+
+    /* Additional responsive tweaks */
+    @media (max-width: 900px) {
+      :root { --time-size: 3.2rem; --container-padding: 28px 36px; }
+    }
+    @media (max-width: 520px) {
+      :root { --time-size: 2.2rem; --container-padding: 20px 18px; }
+      .nebula { opacity: 0.18; filter: none; } /* avoid heavy filter on small devices */
+      .stars { filter: blur(0.4px); }
+      .shooting-star { width: 2.5px; height: 2.5px; box-shadow: 0 0 8px rgba(255,255,255,0.85); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Gas clouds -->
+  <div class="nebula n1"></div>
+  <div class="nebula n2"></div>
+
+  <!-- Star field -->
+  <div class="stars" id="stars"></div>
+
+  <!-- Shooting stars container -->
+  <div class="shooting-stars" id="shooting-stars"></div>
+
+  <!-- Vignette overlay -->
+  <div class="vignette"></div>
+
+  <!-- Clock -->
+  <div class="container">
+    <div id="time"></div>
+    <div id="date"></div>
+  </div>
+
+  <!-- SVG filter for nebula warping (lighter on mobile controlled by CSS var) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="nebulaNoise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="3" seed="7" result="turb">
+        <animate attributeName="baseFrequency" values="0.008;0.014;0.010;0.008" dur="60s" repeatCount="indefinite" />
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="turb" scale="60" xChannelSelector="R" yChannelSelector="G" result="disp"/>
+      <feGaussianBlur in="disp" stdDeviation="16"/>
+    </filter>
+  </svg>
+
+  <script>
+    // Time & date
+    function updateTime(){ 
+      const now = new Date();
+      document.getElementById('time').textContent = now.toLocaleTimeString();
+      document.getElementById('date').textContent = now.toDateString();
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // Responsive config detection
+    const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    function isMobileViewport() {
+      return window.innerWidth <= 700 || isMobileUA;
+    }
+
+    // DOM refs
+    const starsContainer = document.getElementById('stars');
+    const shootingStarsContainer = document.getElementById('shooting-stars');
+
+    // Variables (will be adjusted for mobile)
+    let STAR_COUNT = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--star-count')) || 180;
+    let TAIL_LENGTH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--tail-length')) || 120;
+
+    // Function to apply mobile/desktop tuning
+    function applyResponsiveTuning() {
+      const mobile = isMobileViewport();
+
+      if (mobile) {
+        // reduce heavy visuals for battery/CPU on phones
+        STAR_COUNT = Math.max(60, Math.round(window.innerWidth * window.innerHeight / 16000)); // density-based fallback
+        TAIL_LENGTH = Math.max(60, Math.round(window.innerWidth * 0.18));
+        document.documentElement.style.setProperty('--nebula-opacity', '0.18');
+      } else {
+        STAR_COUNT = 180;
+        TAIL_LENGTH = 120;
+        document.documentElement.style.setProperty('--nebula-opacity', '0.32');
+      }
+      document.documentElement.style.setProperty('--tail-length', `${TAIL_LENGTH}px`);
+      // recreate stars with new density
+      createStars();
+    }
+
+    // Star generation (recreates container)
+    function createStars() {
+      // clear existing
+      while (starsContainer.firstChild) starsContainer.removeChild(starsContainer.firstChild);
+      const count = STAR_COUNT;
+      for (let i = 0; i < count; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        // size scaled slightly for mobile
+        const size = (Math.random() * (isMobileViewport() ? 1.6 : 2.2)) + (isMobileViewport() ? 0.6 : 0.8);
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.top = `${Math.random() * 100}%`;
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.setProperty('--tw', `${1.6 + Math.random() * (isMobileViewport() ? 2.0 : 3.0)}s`);
+        star.style.animationDelay = `${Math.random() * 3}s`;
+        starsContainer.appendChild(star);
+      }
+    }
+
+    // Shooting star system (same code as before but tuned for mobile)
+    let isAnimationsPaused = false;
+
+    function createShootingStar() {
+      if (isAnimationsPaused) return;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'shooting-star-wrapper';
+
+      const shootingStar = document.createElement('div');
+      shootingStar.className = 'shooting-star';
+
+      const tail = document.createElement('div');
+      tail.className = 'shooting-star-tail';
+      tail.style.width = `var(--tail-length)`;
+
+      const secondaryTail = document.createElement('div');
+      secondaryTail.className = 'shooting-star-tail-secondary';
+      secondaryTail.style.width = `calc(var(--tail-length) * 1.25)`;
+
+      shootingStar.appendChild(tail);
+      shootingStar.appendChild(secondaryTail);
+      wrapper.appendChild(shootingStar);
+
+      // Randomized start/end based on viewport; keep ranges sensible on mobile
+      const side = Math.floor(Math.random() * 4);
+      let startX, startY, endX, endY;
+
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+
+      switch(side) {
+        case 0:
+          startX = Math.random() * W;
+          startY = -30;
+          endX = Math.random() * W * 0.8;
+          endY = H + 40;
+          break;
+        case 1:
+          startX = W + 30;
+          startY = Math.random() * H * 0.6;
+          endX = -Math.random() * W * 0.4;
+          endY = Math.random() * H;
+          break;
+        case 2:
+          startX = W * 0.6 + Math.random() * W * 0.4;
+          startY = H + 30;
+          endX = -Math.random() * 400 - 200;
+          endY = -Math.random() * 400 - 200;
+          break;
+        default:
+          startX = -30;
+          startY = Math.random() * H * 0.6;
+          endX = W * 0.8 + Math.random() * 200;
+          endY = Math.random() * H;
+      }
+
+      const deltaX = Math.round(endX - startX);
+      const deltaY = Math.round(endY - startY);
+      const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+
+      wrapper.style.left = `${startX}px`;
+      wrapper.style.top = `${startY}px`;
+      shootingStar.style.transform = `rotate(${angle}deg)`;
+
+      // Mobile: slightly faster but still smooth; Desktop: slightly longer for cinematic
+      const mobile = isMobileViewport();
+      const duration = mobile ? (Math.random() * 0.8 + 1.6) : (Math.random() * 1.2 + 2.2); // mobile 1.6-2.4s, desktop 2.2-3.4s
+      wrapper.style.setProperty('--duration', `${duration}s`);
+      wrapper.style.setProperty('--endX', `${deltaX}px`);
+      wrapper.style.setProperty('--endY', `${deltaY}px`);
+      tail.style.setProperty('--duration', `${duration}s`);
+      secondaryTail.style.setProperty('--duration', `${duration}s`);
+
+      shootingStarsContainer.appendChild(wrapper);
+
+      // Remove on animation end
+      const cleanUp = () => {
+        if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+      };
+      wrapper.addEventListener('animationend', cleanUp, { once: true });
+
+      // small glow animation
+      shootingStar.style.animation = `glow ${duration}s ease-out forwards`;
+    }
+
+    // Scheduling shooting stars (less frequent on mobile to save CPU)
+    function scheduleNextShootingStar() {
+      if (!isAnimationsPaused) {
+        createShootingStar();
+        if (Math.random() > 0.72) {
+          setTimeout(() => createShootingStar(), Math.random() * (isMobileViewport() ? 500 : 900) + 200);
+        }
+      }
+      const nextInterval = isMobileViewport() ? (Math.random() * 1800 + 900) : (Math.random() * 2500 + 1000);
+      setTimeout(scheduleNextShootingStar, nextInterval);
+    }
+
+    // Pause heavy visuals when page hidden
+    document.addEventListener('visibilitychange', ()=>{
+      if (document.hidden) {
+        document.documentElement.style.setProperty('--nebula-opacity', '0');
+        isAnimationsPaused = true;
+      } else {
+        isAnimationsPaused = false;
+        applyResponsiveTuning(); // ensure tuning reapplies
+      }
+    });
+
+    // Re-apply tuning on resize/orientation change (debounced)
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        applyResponsiveTuning();
+      }, 160);
+    });
+
+    // initial setup
+    applyResponsiveTuning();
+    // start shooting stars a bit after load
+    setTimeout(scheduleNextShootingStar, 700);
+
+    // Accessibility: respect reduced motion
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // stop shooting stars and nebula animation
+      isAnimationsPaused = true;
+      document.documentElement.style.setProperty('--nebula-opacity', '0');
+    }
+  </script>
+</body>
+</html>
